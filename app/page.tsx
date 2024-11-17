@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Clock, Sun, Cloud, Moon, Droplets, Sunrise, Loader2 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface WeatherData {
@@ -97,61 +96,34 @@ export default function Home() {
     };
   };
 
-  // WebSocket connection logic remains the same
+  // Replace WebSocket logic with REST API polling
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    
-    const connectWebSocket = () => {
-      ws = new WebSocket('ws://localhost:8080');
-
-      ws.onopen = () => {
-        setWsStatus('connected');
-        setErrorMessage('');
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          
-          if (message.type === 'data' && message.payload) {
-            setWeatherData(message.payload);
-            setReadings(prev => {
-              const newReadings = [...prev, message.payload];
-              return newReadings.slice(-3600);
-            });
-            setMetrics(calculateMetrics(message.payload, readings));
-            setErrorMessage('');
-          } else if (message.type === 'error') {
-            setErrorMessage(message.message || 'An error occurred');
-          } else if (message.type === 'status') {
-            setWsStatus(message.connected ? 'connected' : 'error');
-            if (!message.connected) setErrorMessage('Arduino disconnected');
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket data:', error);
-          setErrorMessage('Error parsing data from server');
+    const fetchWeatherData = async () => {
+      try {
+        const response = await fetch('/api/weather');
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        if (data.length > 0) {
+          const latestReading = data[0];
+          setWeatherData(latestReading);
+          setReadings(data);
+          setMetrics(calculateMetrics(latestReading, data));
+          setWsStatus('connected');
+          setErrorMessage('');
         }
-      };
-
-      ws.onerror = () => {
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
         setWsStatus('error');
-        setErrorMessage('WebSocket connection failed');
-      };
-
-      ws.onclose = () => {
-        setWsStatus('connecting');
-        setErrorMessage('Connection lost. Reconnecting...');
-        setTimeout(connectWebSocket, 5000);
-      };
-    };
-
-    connectWebSocket();
-
-    return () => {
-      if (ws) {
-        ws.close();
+        setErrorMessage('Failed to fetch weather data');
       }
     };
+
+    // Fetch immediately and then every 30 seconds
+    fetchWeatherData();
+    const interval = setInterval(fetchWeatherData, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const StatusIndicator = () => (
