@@ -1,24 +1,37 @@
+// src/app/api/weather/route.ts
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
+import mongoose, { Model, Document } from 'mongoose';
 
-// Define how your weather data should look
-const WeatherDataSchema = new mongoose.Schema({
-  rainAnalog: Number,
-  rainDigital: Number,
-  lightValue: Number,
-  lightPercentage: Number,
+// Define interface for weather data
+interface IWeatherData extends Document {
+  rainAnalog: number;
+  rainDigital: number;
+  lightValue: number;
+  lightPercentage: number;
+  timestamp: Date;
+}
+
+// Define the schema with types
+const WeatherDataSchema = new mongoose.Schema<IWeatherData>({
+  rainAnalog: { type: Number, required: true },
+  rainDigital: { type: Number, required: true },
+  lightValue: { type: Number, required: true },
+  lightPercentage: { type: Number, required: true },
   timestamp: { type: Date, default: Date.now }
 });
 
-// Initialize the MongoDB model
-let WeatherData: any;
+// Define model with proper typing
+let WeatherData: Model<IWeatherData>;
+
 try {
-  WeatherData = mongoose.model('WeatherData');
+  // Try to get existing model
+  WeatherData = mongoose.model<IWeatherData>('WeatherData');
 } catch {
-  WeatherData = mongoose.model('WeatherData', WeatherDataSchema);
+  // Create new model if it doesn't exist
+  WeatherData = mongoose.model<IWeatherData>('WeatherData', WeatherDataSchema);
 }
 
-// Function to connect to MongoDB
+// MongoDB connection function
 async function connectDB() {
   try {
     if (mongoose.connections[0].readyState) return;
@@ -29,7 +42,7 @@ async function connectDB() {
   }
 }
 
-// GET handler - Retrieves weather data
+// GET handler
 export async function GET() {
   await connectDB();
   
@@ -46,16 +59,36 @@ export async function GET() {
   }
 }
 
-// POST handler - Saves new weather data
+// POST handler with type checking
 export async function POST(request: Request) {
   await connectDB();
   
   try {
     const body = await request.json();
-    const weatherData = new WeatherData(body);
+    
+    // Validate required fields
+    const requiredFields = ['rainAnalog', 'rainDigital', 'lightValue', 'lightPercentage'];
+    const missingFields = requiredFields.filter(field => !(field in body));
+    
+    if (missingFields.length > 0) {
+      return NextResponse.json(
+        { error: `Missing required fields: ${missingFields.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const weatherData = new WeatherData({
+      rainAnalog: body.rainAnalog,
+      rainDigital: body.rainDigital,
+      lightValue: body.lightValue,
+      lightPercentage: body.lightPercentage,
+      timestamp: new Date()
+    });
+
     await weatherData.save();
     return NextResponse.json(weatherData, { status: 201 });
   } catch (error) {
+    console.error('Error saving data:', error);
     return NextResponse.json(
       { error: 'Failed to save data' },
       { status: 500 }

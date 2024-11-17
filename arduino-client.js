@@ -3,7 +3,7 @@ const { ReadlineParser } = require('@serialport/parser-readline');
 const fetch = require('node-fetch');
 
 // Replace with your Vercel deployment URL
-const VERCEL_URL = 'https://your-project-name.vercel.app/api/weather';
+const VERCEL_URL = 'https://weathermonitoring-ygwm.vercel.app/api/weather';
 
 async function connectToArduino() {
   try {
