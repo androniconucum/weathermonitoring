@@ -1,24 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Sun,
-  Cloud,
-  Moon,
-  Droplets,
-  Sunrise,
-  Loader2,
-} from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { AlertCircle, CheckCircle2, Clock, Sun, Cloud, Moon, Droplets, Sunrise, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface WeatherData {
   rainAnalog: number;
@@ -37,20 +22,30 @@ interface WeatherMetrics {
   trend: 'increasing' | 'decreasing' | 'stable';
 }
 
+interface WebSocketMessage {
+  type: 'data' | 'error' | 'status';
+  payload?: WeatherData;
+  message?: string;
+  connected?: boolean;
+}
+
 export default function Home() {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [readings, setReadings] = useState<WeatherData[]>([]);
   const [metrics, setMetrics] = useState<WeatherMetrics>({
     lightIntensity: 'Unknown',
     lightCategory: 'Unknown',
     rainIntensity: 'Unknown',
     rainProbability: 0,
     lastHourReadings: [],
-    trend: 'stable',
+    trend: 'stable'
   });
 
+  // Previous calculation functions remain the same
   const calculateMetrics = (data: WeatherData, historicalData: WeatherData[]): WeatherMetrics => {
+    // ... (keep existing calculation logic)
     const getLightIntensity = (percentage: number) => {
       if (percentage < 20) return 'Very Dark';
       if (percentage < 40) return 'Dark';
@@ -67,7 +62,7 @@ export default function Home() {
     };
 
     const getRainIntensity = (analog: number) => {
-      const normalizedValue = ((1024 - analog) / 1024) * 100;
+      const normalizedValue = (1024 - analog) / 1024 * 100;
       if (normalizedValue < 10) return 'No Rain';
       if (normalizedValue < 30) return 'Light Drizzle';
       if (normalizedValue < 60) return 'Moderate Rain';
@@ -76,12 +71,12 @@ export default function Home() {
     };
 
     const calculateRainProbability = (analog: number) => {
-      return Math.min(100, Math.max(0, ((1024 - analog) / 1024) * 100));
+      return Math.min(100, Math.max(0, ((1024 - analog) / 1024 * 100)));
     };
 
     const calculateTrend = (current: number, history: WeatherData[]) => {
       if (history.length < 3) return 'stable';
-      const recentValues = history.slice(-3).map((h) => h.lightPercentage);
+      const recentValues = history.slice(-3).map(h => h.lightPercentage);
       const average = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
       if (current > average + 5) return 'increasing';
       if (current < average - 5) return 'decreasing';
@@ -90,7 +85,7 @@ export default function Home() {
 
     const lastHourReadings = historicalData
       .slice(-60)
-      .map((reading) => reading.lightPercentage);
+      .map(reading => reading.lightPercentage);
 
     return {
       lightIntensity: getLightIntensity(data.lightPercentage),
@@ -98,34 +93,66 @@ export default function Home() {
       rainIntensity: getRainIntensity(data.rainAnalog),
       rainProbability: calculateRainProbability(data.rainAnalog),
       lastHourReadings,
-      trend: calculateTrend(data.lightPercentage, historicalData),
+      trend: calculateTrend(data.lightPercentage, historicalData)
     };
   };
 
+  // WebSocket connection logic remains the same
   useEffect(() => {
-    const fetchWeatherData = async () => {
-      try {
-        const response = await fetch('/api/weather');
-        if (!response.ok) throw new Error('Failed to fetch');
-        const data = await response.json();
-        if (data.length > 0) {
-          const latestReading = data[0];
-          setWeatherData(latestReading);
-          setMetrics(calculateMetrics(latestReading, data));
-          setWsStatus('connected');
-          setErrorMessage('');
+    let ws: WebSocket | null = null;
+  
+    const connectWebSocket = () => {
+      ws = new WebSocket('ws://localhost:8080');
+  
+      ws.onopen = () => {
+        setWsStatus('connected');
+        setErrorMessage('');
+      };
+  
+      ws.onmessage = (event) => {
+        try {
+          const message: WebSocketMessage = JSON.parse(event.data);
+  
+          if (message.type === 'data' && message.payload) {
+            setWeatherData(message.payload);
+            setReadings(prev => {
+              const newReadings = [...prev, message.payload];
+              // Filter out any undefined values just in case
+              return newReadings.filter(Boolean).slice(-3600);
+            });
+            setMetrics(prevMetrics => calculateMetrics(message.payload, [...readings, message.payload]));
+            setErrorMessage('');
+          } else if (message.type === 'error') {
+            setErrorMessage(message.message || 'An error occurred');
+          } else if (message.type === 'status') {
+            setWsStatus(message.connected ? 'connected' : 'error');
+            if (!message.connected) setErrorMessage('Arduino disconnected');
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket data:', error);
+          setErrorMessage('Error parsing data from server');
         }
-      } catch (error) {
-        console.error('Error fetching weather data:', error);
+      };
+  
+      ws.onerror = () => {
         setWsStatus('error');
-        setErrorMessage('Failed to fetch weather data');
-      }
+        setErrorMessage('WebSocket connection failed');
+      };
+  
+      ws.onclose = () => {
+        setWsStatus('connecting');
+        setErrorMessage('Connection lost. Reconnecting...');
+        setTimeout(connectWebSocket, 5000);
+      };
     };
-
-    fetchWeatherData();
-    const interval = setInterval(fetchWeatherData, 30000);
-    return () => clearInterval(interval);
+  
+    connectWebSocket();
+  
+    return () => {
+      if (ws) ws.close();
+    };
   }, []);
+  
 
   const StatusIndicator = () => (
     <div className="flex items-center gap-2 mb-6 p-3 rounded-lg bg-white shadow-sm">
@@ -136,22 +163,18 @@ export default function Home() {
       ) : (
         <AlertCircle className="h-5 w-5 text-red-500" />
       )}
-      <span
-        className={`text-sm font-medium ${
-          wsStatus === 'connected'
-            ? 'text-green-700'
-            : wsStatus === 'connecting'
-            ? 'text-yellow-700'
-            : 'text-red-700'
-        }`}
-      >
-        {wsStatus === 'connected'
-          ? 'System Online'
-          : wsStatus === 'connecting'
-          ? 'Connecting...'
-          : 'Connection Error'}
+      <span className={`text-sm font-medium ${
+        wsStatus === 'connected' ? 'text-green-700' :
+        wsStatus === 'connecting' ? 'text-yellow-700' :
+        'text-red-700'
+      }`}>
+        {wsStatus === 'connected' ? 'System Online' :
+         wsStatus === 'connecting' ? 'Connecting...' :
+         'Connection Error'}
       </span>
-      {errorMessage && <span className="text-sm text-red-500 ml-2">- {errorMessage}</span>}
+      {errorMessage && (
+        <span className="text-sm text-red-500 ml-2">- {errorMessage}</span>
+      )}
     </div>
   );
 

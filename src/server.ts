@@ -81,7 +81,6 @@ app.get('/api/weather/latest', async (req, res) => {
     const latestData = await WeatherData.findOne().sort({ timestamp: -1 });
     res.json(latestData);
   } catch (error) {
-    console.error('Failed to fetch data:', error); // Log the error
     res.status(500).json({ error: 'Failed to fetch data' });
   }
 });
@@ -93,7 +92,6 @@ app.get('/api/weather/history', async (req, res) => {
       .limit(100);
     res.json(history);
   } catch (error) {
-    console.error('Failed to fetch history:', error); // Log the error
     res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
