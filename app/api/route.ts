@@ -44,54 +44,56 @@ async function connectDB() {
 
 // GET handler
 export async function GET() {
-  await connectDB();
-  
-  try {
-    const data = await WeatherData.find()
-      .sort({ timestamp: -1 })
-      .limit(10);
-    return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch data' },
-      { status: 500 }
-    );
-  }
-}
-
-// POST handler with type checking
-export async function POST(request: Request) {
-  await connectDB();
-  
-  try {
-    const body = await request.json();
+    await connectDB();
     
-    // Validate required fields
-    const requiredFields = ['rainAnalog', 'rainDigital', 'lightValue', 'lightPercentage'];
-    const missingFields = requiredFields.filter(field => !(field in body));
-    
-    if (missingFields.length > 0) {
+    try {
+      const data = await WeatherData.find()
+        .sort({ timestamp: -1 })
+        .limit(10);
+      return NextResponse.json(data);
+    } catch (error) {
+      console.error('Failed to fetch data:', error); // Log the error
       return NextResponse.json(
-        { error: `Missing required fields: ${missingFields.join(', ')}` },
-        { status: 400 }
+        { error: 'Failed to fetch data' },
+        { status: 500 }
       );
     }
-
-    const weatherData = new WeatherData({
-      rainAnalog: body.rainAnalog,
-      rainDigital: body.rainDigital,
-      lightValue: body.lightValue,
-      lightPercentage: body.lightPercentage,
-      timestamp: new Date()
-    });
-
-    await weatherData.save();
-    return NextResponse.json(weatherData, { status: 201 });
-  } catch (error) {
-    console.error('Error saving data:', error);
-    return NextResponse.json(
-      { error: 'Failed to save data' },
-      { status: 500 }
-    );
   }
-}
+  
+  // POST handler with type checking
+  export async function POST(request: Request) {
+    await connectDB();
+    
+    try {
+      const body = await request.json();
+      
+      // Validate required fields
+      const requiredFields = ['rainAnalog', 'rainDigital', 'lightValue', 'lightPercentage'];
+      const missingFields = requiredFields.filter(field => !(field in body));
+      
+      if (missingFields.length > 0) {
+        return NextResponse.json(
+          { error: `Missing required fields: ${missingFields.join(', ')}` },
+          { status: 400 }
+        );
+      }
+  
+      const weatherData = new WeatherData({
+        rainAnalog: body.rainAnalog,
+        rainDigital: body.rainDigital,
+        lightValue: body.lightValue,
+        lightPercentage: body.lightPercentage,
+        timestamp: new Date()
+      });
+  
+      await weatherData.save();
+      return NextResponse.json(weatherData, { status: 201 });
+    } catch (error) {
+      console.error('Error saving data:', error); // Log the error
+      return NextResponse.json(
+        { error: 'Failed to save data' },
+        { status: 500 }
+      );
+    }
+  }
+  
