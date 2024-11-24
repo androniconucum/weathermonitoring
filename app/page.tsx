@@ -113,13 +113,15 @@ export default function Home() {
           const message: WebSocketMessage = JSON.parse(event.data);
   
           if (message.type === 'data' && message.payload) {
-            setWeatherData(message.payload);
+            const payload = message.payload;
+            setWeatherData(payload);
             setReadings(prev => {
-              const newReadings = [...prev, message.payload];
-              // Filter out any undefined values just in case
-              return newReadings.filter(Boolean).slice(-3600);
+              // Create new array with the payload and ensure it's not undefined
+              const newReadings = [...prev, payload].filter((reading): reading is WeatherData => reading !== undefined);
+              // Return only the last 3600 readings
+              return newReadings.slice(-3600);
             });
-            setMetrics(calculateMetrics(message.payload, [...readings, message.payload]));
+            setMetrics(calculateMetrics(payload, readings));
             setErrorMessage('');
           } else if (message.type === 'error') {
             setErrorMessage(message.message || 'An error occurred');
