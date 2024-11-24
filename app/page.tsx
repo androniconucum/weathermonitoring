@@ -119,7 +119,7 @@ export default function Home() {
               // Filter out any undefined values just in case
               return newReadings.filter(Boolean).slice(-3600);
             });
-            setMetrics(prevMetrics => calculateMetrics(message.payload, [...readings, message.payload]));
+            setMetrics(calculateMetrics(message.payload, [...readings, message.payload]));
             setErrorMessage('');
           } else if (message.type === 'error') {
             setErrorMessage(message.message || 'An error occurred');

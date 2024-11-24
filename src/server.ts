@@ -1,6 +1,4 @@
 import express from 'express';
-import { SerialPort } from 'serialport';
-import { ReadlineParser } from '@serialport/parser-readline';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
