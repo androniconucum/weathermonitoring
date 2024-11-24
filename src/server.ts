@@ -28,14 +28,7 @@ mongoose.connect(process.env.MONGODB_URI as string)
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Serial Port Configuration
-const serialPort = new SerialPort({ 
-  path: 'COM5', // Change this to match your Arduino port
-  baudRate: 9600 
-});
-
-const parser = serialPort.pipe(new ReadlineParser({ delimiter: '\n' }));
-
+  
 // Parse Arduino data
 function parseArduinoData(data: string) {
   try {
