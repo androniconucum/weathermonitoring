@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Clock, Sun, Cloud, Moon, Droplets, Sunrise, Loader2 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface WeatherData {
