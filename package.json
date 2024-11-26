@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently \"next dev\" \"node serial-server.js\"",
     "build": "next build",
     "start": "next start",
+    "start-server": "node serial-server.js",
     "lint": "next lint"
   },
   "dependencies": {

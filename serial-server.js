@@ -12,11 +12,15 @@ const wss = new WebSocket.Server({ server });
 // Add CORS configuration
 app.use(cors({
   origin: [
-    'https://weathermonitoring-jc38.vercel.app/', // Replace with your actual domain
+    'https://weathermonitoring-jc38-8c4de1ec2-androniconucums-projects.vercel.app/', // Replace with your actual domain
     'http://localhost:3000' // Keep for local development
   ]
 }));
 
+// Declare connectedClients set in a global scope
+const connectedClients = new Set();
+// Declare serialPort in a global scope
+let serialPort;
 
 // Enhanced broadcast function with logging
 function broadcast(message) {
