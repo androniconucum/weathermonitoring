@@ -3,16 +3,20 @@ const { ReadlineParser } = require('@serialport/parser-readline');
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 
-// Create Express app
 const app = express();
 app.use(cors());
 const server = require('http').createServer(app);
 const wss = new WebSocket.Server({ server });
 
-let serialPort = null;
-let connectedClients = new Set();
+// Add CORS configuration
+app.use(cors({
+  origin: [
+    'https://weathermonitoring-jc38.vercel.app/', // Replace with your actual domain
+    'http://localhost:3000' // Keep for local development
+  ]
+}));
+
 
 // Enhanced broadcast function with logging
 function broadcast(message) {
