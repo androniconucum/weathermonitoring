@@ -12,7 +12,7 @@ const wss = new WebSocket.Server({ server });
 // Add CORS configuration
 app.use(cors({
   origin: [
-    'https://weathermonitoring-jc38-8c4de1ec2-androniconucums-projects.vercel.app/', // Replace with your actual domain
+    'https://weathermonitoring-jc38.vercel.app/', // Replace with your actual domain
     'http://localhost:3000' // Keep for local development
   ]
 }));
